@@ -1,7 +1,7 @@
 import psycopg2
 
 
-class Connect:
+class DBConnect:
     def __init__(self):
         self.connect = psycopg2.connect(dbname='health_control', user='postgres', password='postgres', host='localhost'
                                         , port='5432')

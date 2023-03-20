@@ -1,10 +1,11 @@
 import psycopg2
-
+from config_read import Settings
 
 class DBConnect:
     def __init__(self):
-        self.connect = psycopg2.connect(dbname='health_control', user='postgres', password='postgres', host='localhost'
-                                        , port='5432')
+        settings = Settings()
+        self.connect = psycopg2.connect(dbname=settings.dbName, user=settings.dbUser, password=settings.dbPassword,
+                                        host=settings.dbHost, port=str(settings.dbPort))
         self.cursor = self.connect.cursor()
 
     def Close(self):

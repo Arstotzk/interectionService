@@ -1,6 +1,9 @@
-from flask import Flask, jsonify
+from uuid import uuid4
+
+from flask import Flask, jsonify, request
 from db_connect import DBConnect
 from rabbit import Rabbit
+import storage
 
 app = Flask(__name__)
 
@@ -68,9 +71,17 @@ def get_image_param_types():
 
 @app.route('/find/points', methods=['POST'])
 def post_find_points():
-    rabbit = Rabbit()
-    rabbit.PutImage()
-    return 'run'
+    print(request.args)
+    print(request.form)
+    print(request.files)
+    image_file = request.files.get("imageFile")
+    if image_file is not None:
+        uuid = uuid4()
+        storage.SaveFile(image_file, uuid.__str__())
+        rabbit = Rabbit()
+        rabbit.PutImage(uuid.__str__())
+        return 'complete'
+    return "error"
 
 
 @app.route('/find/cephalometric', methods=['POST'])
@@ -79,4 +90,4 @@ def post_find_cephalometric():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='192.168.31.168', port=5000, debug=True, threaded=False)

@@ -21,6 +21,8 @@ class Settings:
         self.dbHost = config["dbHost"]
         self.dbPort = config["dbPort"]
 
+        self.filePath = config["filePath"]
+
 
     def read_yaml(self, _file_path):
         """

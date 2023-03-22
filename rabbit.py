@@ -1,6 +1,7 @@
 import pika
 from config_read import Settings
 
+
 class Rabbit:
     def __init__(self):
         settings = Settings()
@@ -11,8 +12,7 @@ class Rabbit:
         self.connection = pika.BlockingConnection(self.parameters)
         self.channel = self.connection.channel()
 
-
-    def PutImage(self):
+    def PutImage(self, uuid):
         self.channel.queue_declare(queue='processing_images')
-        self.channel.basic_publish(exchange='mainExchange', routing_key='processing_images', body='test_image')
+        self.channel.basic_publish(exchange='mainExchange', routing_key='processing_images', body=uuid)
         self.connection.close()

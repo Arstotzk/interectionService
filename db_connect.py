@@ -16,3 +16,9 @@ class DBConnect:
         self.cursor.execute(query)
         result = self.cursor.fetchall()
         return result
+
+    def ExecuteInsertQuery(self, query):
+        self.cursor.execute(query)
+        self.connect.commit()
+        result = self.cursor.fetchone()[0]
+        return result

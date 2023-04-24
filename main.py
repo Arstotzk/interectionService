@@ -25,8 +25,8 @@ def get_users():
 
 @app.route('/image/all', methods=['GET'])
 def get_image_all():
-    name = request.form.get("name")
-    idDevice = request.form.get("idDevice")
+    name = request.args.get("name")
+    idDevice = request.args.get("idDevice")
     if name is not None and idDevice is not None:
         connect = DBConnect()
         result = connect.ExecuteQuery(

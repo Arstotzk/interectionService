@@ -3,11 +3,14 @@ from uuid import uuid4
 from flask import Flask, jsonify, request, abort
 from db_connect import DBConnect
 from rabbit import Rabbit
+from datetime import datetime
 import storage
 
 app = Flask(__name__)
 
+print(datetime.now())
 
+@app.route('/', methods=['GET'])
 @app.route('/info', methods=['GET'])
 def get_info():
     return 'info'
@@ -20,6 +23,22 @@ def get_users():
     connect.Close()
     return result
 
+@app.route('/image/all', methods=['GET'])
+def get_image_all():
+    name = request.form.get("name")
+    idDevice = request.form.get("idDevice")
+    if name is not None and idDevice is not None:
+        connect = DBConnect()
+        result = connect.ExecuteQuery(
+            'SELECT "Guid" FROM users WHERE "idDevice" = \'' + idDevice + '\' AND name = \'' + name + '\'')
+        userUuid = result[0][0]
+        print(userUuid)
+        result = connect.ExecuteQuery('SELECT "Guid", image_path, "user", datetime, status FROM public.images WHERE "user" = \''+ userUuid +'\';')
+        connect.Close()
+        print(result)
+        return result
+    abort(500)
+    return ""
 
 @app.route('/image/points', methods=['GET'])
 def get_image_points():
@@ -84,8 +103,9 @@ def post_find_points():
         result = connect.ExecuteQuery(
             'SELECT "Guid" FROM users WHERE "idDevice" = \'' + idDevice + '\' AND name = \'' + name + '\'')
         userUuid = result[0][0]
-        result = connect.ExecuteInsertQuery('INSERT INTO public.images ("Guid", image_path, "user")'
-                                            'VALUES (\''+uuid.__str__()+'\', \''+path+'\', \''+userUuid+'\') '
+        result = connect.ExecuteInsertQuery('INSERT INTO public.images ("Guid", image_path, "user", "datetime", "status")'
+                                            'VALUES (\''+uuid.__str__()+'\', \''+path+'\', \''+userUuid+'\', '
+                                            'current_timestamp, \'processing\') '
                                             'RETURNING \'Новая запись добавлена.\';')
         connect.Close()
         rabbit = Rabbit()

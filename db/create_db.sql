@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS public.images
     "Guid" uuid NOT NULL DEFAULT gen_random_uuid(),
     image_path character varying(500) COLLATE pg_catalog."default" NOT NULL,
     "user" uuid NOT NULL,
+	"datetime" timestamp without time zone,
+	"status" character varying(50) COLLATE pg_catalog."default",
     CONSTRAINT images_pkey PRIMARY KEY ("Guid"),
     CONSTRAINT fk_users_images FOREIGN KEY ("user")
         REFERENCES public.users ("Guid") MATCH SIMPLE

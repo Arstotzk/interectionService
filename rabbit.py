@@ -16,3 +16,8 @@ class Rabbit:
         self.channel.queue_declare(queue='processing_images')
         self.channel.basic_publish(exchange='mainExchange', routing_key='processing_images', body=uuid)
         self.connection.close()
+
+    def FindParams(self, uuid):
+        self.channel.queue_declare(queue='find_params_images')
+        self.channel.basic_publish(exchange='mainExchange', routing_key='find_params_images', body=uuid)
+        self.connection.close()

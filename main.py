@@ -1,6 +1,7 @@
+from io import BytesIO
 from uuid import uuid4
 
-from flask import Flask, jsonify, request, abort
+from flask import Flask, jsonify, request, abort, send_file
 from db_connect import DBConnect
 from rabbit import Rabbit
 from datetime import datetime
@@ -40,12 +41,44 @@ def get_image_all():
     abort(500)
     return ""
 
+@app.route('/image', methods=['GET'])
+def get_image():
+    name = request.args.get("name")
+    idDevice = request.args.get("idDevice")
+    imageGuid = request.args.get("imageGuid")
+    if name is not None and idDevice is not None:
+        connect = DBConnect()
+        result = connect.ExecuteQuery(
+            'SELECT "Guid" FROM users WHERE "idDevice" = \'' + idDevice + '\' AND name = \'' + name + '\'')
+        userUuid = result[0][0]
+        print(userUuid)
+        result = connect.ExecuteQuery('SELECT "Guid", image_path, "user", datetime, status FROM public.images WHERE "Guid" = \''+ imageGuid +'\';')
+        connect.Close()
+        path = result[0][1] + "\\" + result[0][0]
+        with open(path, "rb") as fh:
+            file = BytesIO(fh.read())
+        print(result)
+        return send_file(file, mimetype='image/png')
+    abort(500)
+    return ""
+
 @app.route('/image/points', methods=['GET'])
 def get_image_points():
-    connect = DBConnect()
-    result = connect.ExecuteQuery('SELECT * FROM points')
-    connect.Close()
-    return result
+    name = request.args.get("name")
+    idDevice = request.args.get("idDevice")
+    imageGuid = request.args.get("imageGuid")
+    if name is not None and idDevice is not None:
+        connect = DBConnect()
+        result = connect.ExecuteQuery(
+            'SELECT "Guid" FROM users WHERE "idDevice" = \'' + idDevice + '\' AND name = \'' + name + '\'')
+        userUuid = result[0][0]
+        print(userUuid)
+        result = connect.ExecuteQuery('SELECT x, y, "name", image, "Guid" FROM public.points as p '
+                                      'join public.point_types as pt on p.point_type = pt."Guid"'
+                                      'WHERE image = \''+ imageGuid +'\';')
+        connect.Close()
+        return result
+    return ""
 
 
 @app.route('/image/lines', methods=['GET'])
@@ -87,6 +120,26 @@ def get_image_param_types():
     connect.Close()
     return result
 
+@app.route('/image/point/coordinate', methods=['POST'])
+def post_image_point_coordinate():
+    name = request.form.get("name")
+    idDevice = request.form.get("idDevice")
+    pointGuid = request.form.get("pointGuid")
+    x = request.form.get("x")
+    y = request.form.get("y")
+    if name is not None and idDevice is not None:
+        connect = DBConnect()
+        result = connect.ExecuteQuery(
+            'SELECT "Guid" FROM users WHERE "idDevice" = \'' + idDevice + '\' AND name = \'' + name + '\'')
+        userUuid = result[0][0]
+        print(userUuid)
+        result = connect.ExecuteChangeDataQuery('UPDATE public.points '
+                                      'SET x=' + x + ', y=' + y + ' '
+                                      'WHERE "Guid"= \'' + pointGuid +'\''
+                                      'RETURNING \'Координата точки обновлена.\';')
+        connect.Close()
+        return result
+    return ""
 
 @app.route('/find/points', methods=['POST'])
 def post_find_points():
@@ -103,13 +156,33 @@ def post_find_points():
         result = connect.ExecuteQuery(
             'SELECT "Guid" FROM users WHERE "idDevice" = \'' + idDevice + '\' AND name = \'' + name + '\'')
         userUuid = result[0][0]
-        result = connect.ExecuteInsertQuery('INSERT INTO public.images ("Guid", image_path, "user", "datetime", "status")'
-                                            'VALUES (\''+uuid.__str__()+'\', \''+path+'\', \''+userUuid+'\', '
+        result = connect.ExecuteChangeDataQuery('INSERT INTO public.images ("Guid", image_path, "user", "datetime", "status")'
+                                            'VALUES (\'' + uuid.__str__() +'\', \'' + path +'\', \'' + userUuid +'\', '
                                             'current_timestamp, \'processing\') '
                                             'RETURNING \'Новая запись добавлена.\';')
         connect.Close()
         rabbit = Rabbit()
         rabbit.PutImage(uuid.__str__())
+        return 'complete'
+    return "error"
+
+@app.route('/find/params', methods=['POST'])
+def post_find_params():
+    print(request.args)
+    print(request.form)
+    print(request.files)
+    name = request.form.get("name")
+    idDevice = request.form.get("idDevice")
+    imageGuid = request.form.get("imageGuid")
+    if imageGuid is not None:
+        connect = DBConnect()
+        result = connect.ExecuteQuery(
+            'SELECT "Guid" FROM users WHERE "idDevice" = \'' + idDevice + '\' AND name = \'' + name + '\'')
+        userUuid = result[0][0]
+
+        connect.Close()
+        rabbit = Rabbit()
+        rabbit.FindParams(imageGuid)
         return 'complete'
     return "error"
 
@@ -122,8 +195,8 @@ def post_user_new():
     idDevice = request.form.get("idDevice")
     if name is not None and idDevice is not None:
         connect = DBConnect()
-        result = connect.ExecuteInsertQuery('INSERT INTO public.users("idDevice", name) '
-                                            'VALUES (\''+idDevice+'\', \''+name+'\') '
+        result = connect.ExecuteChangeDataQuery('INSERT INTO public.users("idDevice", name) '
+                                            'VALUES (\'' + idDevice +'\', \'' + name +'\') '
                                             'RETURNING \'Новый пользователь создан.\';')
         connect.Close()
         return result

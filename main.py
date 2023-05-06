@@ -34,7 +34,9 @@ def get_image_all():
             'SELECT "Guid" FROM users WHERE "idDevice" = \'' + idDevice + '\' AND name = \'' + name + '\'')
         userUuid = result[0][0]
         print(userUuid)
-        result = connect.ExecuteQuery('SELECT "Guid", image_path, "user", datetime, status FROM public.images WHERE "user" = \''+ userUuid +'\';')
+        result = connect.ExecuteQuery('SELECT "Guid", image_path, "user", datetime, status '
+                                      'FROM public.images WHERE "user" = \''+ userUuid +'\''
+                                      'ORDER BY datetime DESC;')
         connect.Close()
         print(result)
         return result
@@ -73,7 +75,7 @@ def get_image_points():
             'SELECT "Guid" FROM users WHERE "idDevice" = \'' + idDevice + '\' AND name = \'' + name + '\'')
         userUuid = result[0][0]
         print(userUuid)
-        result = connect.ExecuteQuery('SELECT x, y, "name", image, "Guid" FROM public.points as p '
+        result = connect.ExecuteQuery('SELECT x, y, "name", image, p."Guid" FROM public.points as p '
                                       'join public.point_types as pt on p.point_type = pt."Guid"'
                                       'WHERE image = \''+ imageGuid +'\';')
         connect.Close()
@@ -91,10 +93,22 @@ def get_image_lines():
 
 @app.route('/image/params', methods=['GET'])
 def get_image_params():
-    connect = DBConnect()
-    result = connect.ExecuteQuery('SELECT * FROM params')
-    connect.Close()
-    return result
+    name = request.args.get("name")
+    idDevice = request.args.get("idDevice")
+    imageGuid = request.args.get("imageGuid")
+    if name is not None and idDevice is not None:
+        connect = DBConnect()
+        result = connect.ExecuteQuery(
+            'SELECT "Guid" FROM users WHERE "idDevice" = \'' + idDevice + '\' AND name = \'' + name + '\'')
+        userUuid = result[0][0]
+        print(userUuid)
+        result = connect.ExecuteQuery('SELECT pt.name, p.value, pt.min, pt.max '
+                                      'FROM public.params as p '
+                                      'JOIN public.param_types as pt on pt."Guid" = p.param_type '
+                                      'WHERE p.image = \''+ imageGuid +'\';')
+        connect.Close()
+        return result
+    return ""
 
 
 @app.route('/image/point_types', methods=['GET'])
@@ -179,7 +193,7 @@ def post_find_params():
         result = connect.ExecuteQuery(
             'SELECT "Guid" FROM users WHERE "idDevice" = \'' + idDevice + '\' AND name = \'' + name + '\'')
         userUuid = result[0][0]
-
+        result = connect.ExecuteChangeDataQuery('UPDATE public.images SET status= \'processing\' WHERE "Guid" = \'' + imageGuid + '\' RETURNING \'Запись обновлена.\';')
         connect.Close()
         rabbit = Rabbit()
         rabbit.FindParams(imageGuid)
@@ -228,11 +242,6 @@ def get_user():
             'error': 'Name or device cannot be empty'}
     print(data)
     return jsonify(data)
-
-@app.route('/find/cephalometric', methods=['POST'])
-def post_find_cephalometric():
-    return 'image_info'
-
 
 if __name__ == '__main__':
     app.run(host='192.168.31.168', port=5000, debug=True, threaded=False)
